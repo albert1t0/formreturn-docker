@@ -1,0 +1,74 @@
+# FormReturn 1.7.5 — contenedor con VNC web (noVNC)
+# Acceso vía navegador: http://localhost:6080/vnc.html
+FROM eclipse-temurin:8-jdk
+
+# X11 + VNC + window manager
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        fonts-dejavu \
+        fonts-liberation \
+        fontconfig \
+        libfreetype6 \
+        libxext6 \
+        libxrender1 \
+        libxi6 \
+        libxtst6 \
+        libx11-6 \
+        libxt6 \
+        libxmu6 \
+        libxfixes3 \
+        libxdamage1 \
+        libxcomposite1 \
+        unzip \
+        curl \
+        ca-certificates \
+        x11vnc \
+        xvfb \
+        fluxbox \
+        pcmanfm \
+        websockify \
+        net-tools \
+    && rm -rf /var/lib/apt/lists/*
+
+ARG APP_USER=ubuntu
+ENV FR_HOME=/opt/formreturn
+WORKDIR ${FR_HOME}
+
+ARG FORMRETURN_VERSION=1.7.5
+RUN curl -fsSL -o /tmp/installer.jar \
+        "https://github.com/rquast/formreturn/releases/download/v${FORMRETURN_VERSION}/formreturn_setup_${FORMRETURN_VERSION}.jar" \
+    && mkdir -p ${FR_HOME}/lib \
+    && unzip -j -o /tmp/installer.jar 'lib/*' -d ${FR_HOME}/lib/ \
+    && chmod -R a+rX ${FR_HOME} \
+    && rm -f /tmp/installer.jar
+
+# noVNC para acceso web
+RUN mkdir -p /opt/novnc && \
+    curl -fsSL -o /tmp/novnc.zip https://github.com/novnc/noVNC/archive/refs/tags/v1.4.0.zip && \
+    unzip -q /tmp/novnc.zip -d /opt/novnc && \
+    mv /opt/novnc/noVNC-1.4.0 /opt/novnc/noVNC && \
+    rm -f /tmp/novnc.zip && \
+    chmod -R a+rX /opt/novnc/noVNC
+
+COPY entrypoint-vnc.sh /entrypoint.sh
+RUN chmod a+rx /entrypoint.sh
+
+COPY formreturn_server.sh ${FR_HOME}/formreturn_server.sh
+RUN chmod a+rx ${FR_HOME}/formreturn_server.sh
+
+# Crear directorio Desktop y acceso directo para Uploads
+RUN mkdir -p /home/ubuntu/Desktop && \
+    echo "[Desktop Entry]" > /home/ubuntu/Desktop/Uploads.desktop && \
+    echo "Type=Link" >> /home/ubuntu/Desktop/Uploads.desktop && \
+    echo "Name=Archivos para subir" >> /home/ubuntu/Desktop/Uploads.desktop && \
+    echo "Icon=folder" >> /home/ubuntu/Desktop/Uploads.desktop && \
+    echo "Comment=Directorio compartido con el host" >> /home/ubuntu/Desktop/Uploads.desktop && \
+    echo "URL=/home/ubuntu/Uploads" >> /home/ubuntu/Desktop/Uploads.desktop && \
+    chmod +x /home/ubuntu/Desktop/Uploads.desktop && \
+    chown -R ubuntu:ubuntu /home/ubuntu/Desktop
+
+USER ${APP_USER}
+ENV HOME=/home/${APP_USER}
+WORKDIR ${FR_HOME}
+
+EXPOSE 6080
+ENTRYPOINT ["/entrypoint.sh"]
