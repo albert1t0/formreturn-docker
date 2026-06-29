@@ -49,6 +49,12 @@ RUN chmod a+rx ${FR_HOME}/formreturn_server.sh
 # A partir de aquí la app corre como usuario no-root (uid = el del host).
 USER ${APP_USER}
 ENV HOME=/home/${APP_USER}
+# Ruta DENTRO del contenedor donde la app guarda sus datos (BD Derby, formularios,
+# capturas). Java la deriva de HOME, así que es ${HOME}/.formreturn. run.sh la lee
+# de la imagen para montar aquí tu carpeta del host -> el Dockerfile es la fuente
+# de verdad. Configurable con --build-arg FR_DATA_DIR=...
+ARG FR_DATA_DIR=/home/${APP_USER}/.formreturn
+ENV FR_DATA_DIR=${FR_DATA_DIR}
 # Swing en blanco bajo XWayland: Java pide un visual ARGB de 32-bit que XWayland
 # no pinta. Forzar visuals RGB (24-bit) lo resuelve. Aplica a Manager y Server.
 ENV XLIB_SKIP_ARGB_VISUALS=1

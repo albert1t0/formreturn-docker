@@ -33,6 +33,17 @@ ARG APP_USER=ubuntu
 ENV FR_HOME=/opt/formreturn
 WORKDIR ${FR_HOME}
 
+# Rutas DENTRO del contenedor (configurables aquí o con --build-arg). run-vnc.sh
+# las lee de la imagen para montar tus carpetas del host -> el Dockerfile es la
+# fuente de verdad.
+#   FR_DATA_DIR    datos de la app (BD Derby, formularios, capturas). Java lo
+#                  deriva de HOME, así que debe ser /home/<APP_USER>/.formreturn.
+#   FR_UPLOADS_DIR carpeta compartida para subir imágenes a procesar.
+ARG FR_DATA_DIR=/home/${APP_USER}/.formreturn
+ARG FR_UPLOADS_DIR=/home/${APP_USER}/Uploads
+ENV FR_DATA_DIR=${FR_DATA_DIR} \
+    FR_UPLOADS_DIR=${FR_UPLOADS_DIR}
+
 ARG FORMRETURN_VERSION=1.7.5
 RUN curl -fsSL -o /tmp/installer.jar \
         "https://github.com/rquast/formreturn/releases/download/v${FORMRETURN_VERSION}/formreturn_setup_${FORMRETURN_VERSION}.jar" \
@@ -55,16 +66,18 @@ RUN chmod a+rx /entrypoint.sh
 COPY formreturn_server.sh ${FR_HOME}/formreturn_server.sh
 RUN chmod a+rx ${FR_HOME}/formreturn_server.sh
 
-# Crear directorio Desktop y acceso directo para Uploads
-RUN mkdir -p /home/ubuntu/Desktop && \
-    echo "[Desktop Entry]" > /home/ubuntu/Desktop/Uploads.desktop && \
-    echo "Type=Link" >> /home/ubuntu/Desktop/Uploads.desktop && \
-    echo "Name=Archivos para subir" >> /home/ubuntu/Desktop/Uploads.desktop && \
-    echo "Icon=folder" >> /home/ubuntu/Desktop/Uploads.desktop && \
-    echo "Comment=Directorio compartido con el host" >> /home/ubuntu/Desktop/Uploads.desktop && \
-    echo "URL=/home/ubuntu/Uploads" >> /home/ubuntu/Desktop/Uploads.desktop && \
-    chmod +x /home/ubuntu/Desktop/Uploads.desktop && \
-    chown -R ubuntu:ubuntu /home/ubuntu/Desktop
+# Carpeta de subida + acceso directo en el escritorio (apunta a FR_UPLOADS_DIR).
+RUN mkdir -p "/home/${APP_USER}/Desktop" "${FR_UPLOADS_DIR}" && \
+    printf '%s\n' \
+        '[Desktop Entry]' \
+        'Type=Link' \
+        'Name=Archivos para subir' \
+        'Icon=folder' \
+        'Comment=Directorio compartido con el host' \
+        "URL=${FR_UPLOADS_DIR}" \
+        > "/home/${APP_USER}/Desktop/Uploads.desktop" && \
+    chmod +x "/home/${APP_USER}/Desktop/Uploads.desktop" && \
+    chown -R ${APP_USER}:${APP_USER} "/home/${APP_USER}/Desktop" "${FR_UPLOADS_DIR}"
 
 USER ${APP_USER}
 ENV HOME=/home/${APP_USER}

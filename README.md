@@ -107,6 +107,41 @@ de Fluxbox). Coloca ahí las imágenes escaneadas para importarlas desde FormRet
 
 ---
 
+## Rutas configurables
+
+Las carpetas de datos y de subida se pueden decidir sin editar varios sitios. Las
+**rutas dentro del contenedor** son la fuente de verdad y se definen en los
+Dockerfile; los scripts `run*.sh` las leen automáticamente de la imagen.
+
+**Dentro del contenedor** (en `Dockerfile` / `Dockerfile.vnc`, editables o con
+`--build-arg`):
+
+| Build-arg | Por defecto | Qué es |
+|-----------|-------------|--------|
+| `FR_DATA_DIR` | `/home/ubuntu/.formreturn` | Datos de la app (BD Derby, formularios, capturas). Debe ser `${HOME}/.formreturn` porque Java lo deriva de `HOME`. |
+| `FR_UPLOADS_DIR` | `/home/ubuntu/Uploads` | Carpeta compartida para subir imágenes (solo VNC). |
+
+```bash
+docker build -f Dockerfile.vnc \
+  --build-arg FR_UPLOADS_DIR=/home/ubuntu/Compartido \
+  -t formreturn:1.7.5-vnc .
+```
+
+**En el host** (variables de entorno al lanzar; los scripts las honran):
+
+| Variable | Por defecto | Qué es |
+|----------|-------------|--------|
+| `FR_DIR` | `~/.formreturn` | Carpeta del host con los datos (ambos modos). |
+| `UPLOAD_DIR` | `~/FormReturnUploads` | Carpeta del host compartida (modo VNC). |
+| `FR_IMAGE` | `formreturn:1.7.5[-vnc]` | Nombre/tag de la imagen. |
+| `FR_CONTAINER_DATA` / `FR_CONTAINER_UPLOADS` | (se leen de la imagen) | Forzar el punto de montaje dentro del contenedor. |
+
+```bash
+FR_DIR=/datos/formreturn UPLOAD_DIR=/datos/uploads ./run-vnc.sh
+```
+
+---
+
 ## Memoria
 
 Por defecto la JVM usa `-Xmx1024m`. Para formularios o imágenes grandes:
