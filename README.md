@@ -10,6 +10,11 @@ La imagen descarga el instalador oficial precompilado (release `v1.7.5`) y extra
 únicamente `lib/` (la app + sus ~60 dependencias). **No compila nada**, así que no
 depende de `maven.formreturn.com` ni del paso de instalación interactivo.
 
+![FormReturn Manager 1.7.5 corriendo en el contenedor](docs/screenshot.png)
+
+> FormReturn Manager 1.7.5 corriendo dentro del contenedor (modo VNC web,
+> visto desde el navegador).
+
 ## Dos modos de ejecución
 
 El repositorio ofrece dos formas de mostrar la interfaz gráfica:
