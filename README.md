@@ -105,6 +105,14 @@ El modo VNC monta `~/FormReturnUploads` del host en `/home/ubuntu/Uploads` dentr
 del contenedor (con un acceso directo **«Archivos para subir»** en el escritorio
 de Fluxbox). Coloca ahí las imágenes escaneadas para importarlas desde FormReturn.
 
+### Navegador web (enlaces de ayuda)
+
+FormReturn abre páginas de ayuda/tutoriales en un navegador externo. La imagen VNC
+incluye **Firefox** (instalado desde el repositorio oficial de Mozilla) para que
+esos enlaces funcionen; sin él, FormReturn mostraba *«Could not find web browser»*.
+Firefox viene preconfigurado vía `autoconfig` para abrir la URL directamente, sin
+el modal de *Terms of Use* ni el asistente de primer arranque.
+
 ---
 
 ## Memoria

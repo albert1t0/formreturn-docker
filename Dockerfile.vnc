@@ -49,6 +49,55 @@ RUN mkdir -p /opt/novnc && \
     rm -f /tmp/novnc.zip && \
     chmod -R a+rX /opt/novnc/noVNC
 
+# Navegador web: FormReturn (Misc.openURL) busca con `which` un binario de una
+# lista fija y lanza el primero que encuentre; sin navegador muestra el diálogo
+# "Could not find web browser". En Ubuntu 26.04 firefox-esr no existe y el
+# firefox/chromium de apt son stubs de snap (no arrancan en contenedor), así que
+# instalamos Firefox real desde el repositorio oficial de Mozilla. Provee
+# /usr/bin/firefox, que coincide con la entrada `firefox` de esa lista.
+RUN install -d -m 0755 /etc/apt/keyrings && \
+    curl -fsSL https://packages.mozilla.org/apt/repo-signing-key.gpg \
+        -o /etc/apt/keyrings/packages.mozilla.org.asc && \
+    echo "deb [signed-by=/etc/apt/keyrings/packages.mozilla.org.asc] https://packages.mozilla.org/apt mozilla main" \
+        > /etc/apt/sources.list.d/mozilla.list && \
+    printf 'Package: *\nPin: origin packages.mozilla.org\nPin-Priority: 1000\n' \
+        > /etc/apt/preferences.d/mozilla && \
+    apt-get update && \
+    apt-get install -y --no-install-recommends firefox && \
+    rm -rf /var/lib/apt/lists/*
+
+# Políticas de empresa: deshabilitan actualizaciones y la comprobación de
+# navegador por defecto.
+RUN mkdir -p /etc/firefox/policies && \
+    printf '%s\n' \
+        '{ "policies": {' \
+        '    "DisableAppUpdate": true,' \
+        '    "DontCheckDefaultBrowser": true,' \
+        '    "OverrideFirstRunPage": "",' \
+        '    "OverridePostUpdatePage": ""' \
+        '} }' \
+        > /etc/firefox/policies/policies.json
+
+# autoconfig (mozilla.cfg): el modal de "Terms of Use"/onboarding lo controla
+# termsofuse.*/browser.preonboarding.*, prefs que la política Preferences NO
+# puede fijar (no están en su allowlist). autoconfig sí puede fijar cualquier
+# pref, así Firefox abre la URL directamente sin tapar la página con el modal.
+# El perfil es efímero (HOME=/home/ubuntu no se monta), por eso debe ir a nivel
+# de la instalación, no del perfil.
+RUN printf '%s\n' \
+        'pref("general.config.filename", "mozilla.cfg");' \
+        'pref("general.config.obscure_value", 0);' \
+        'pref("general.config.sandbox_enabled", false);' \
+        > /usr/lib/firefox/defaults/pref/autoconfig.js && \
+    printf '%s\n' \
+        '// la primera línea se ignora por diseño de autoconfig' \
+        'lockPref("browser.preonboarding.enabled", false);' \
+        'lockPref("termsofuse.bypassNotification", true);' \
+        'lockPref("browser.aboutwelcome.enabled", false);' \
+        'lockPref("browser.shell.checkDefaultBrowser", false);' \
+        'lockPref("datareporting.policy.dataSubmissionEnabled", false);' \
+        > /usr/lib/firefox/mozilla.cfg
+
 COPY entrypoint-vnc.sh /entrypoint.sh
 RUN chmod a+rx /entrypoint.sh
 
